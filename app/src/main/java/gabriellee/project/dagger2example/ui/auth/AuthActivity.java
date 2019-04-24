@@ -1,5 +1,6 @@
 package gabriellee.project.dagger2example.ui.auth;
 
+import android.content.Intent;
 import android.graphics.drawable.Drawable;
 import android.os.Bundle;
 import android.text.TextUtils;
@@ -20,6 +21,7 @@ import javax.inject.Inject;
 import dagger.android.support.DaggerAppCompatActivity;
 import gabriellee.project.dagger2example.R;
 import gabriellee.project.dagger2example.models.User;
+import gabriellee.project.dagger2example.ui.main.MainActivity;
 import gabriellee.project.dagger2example.viewmodels.ViewModelProviderFactory;
 
 public class AuthActivity extends DaggerAppCompatActivity implements View.OnClickListener {
@@ -55,36 +57,46 @@ public class AuthActivity extends DaggerAppCompatActivity implements View.OnClic
     }
 
     private void subscribeObservers() {
-        viewModel.observeUser().observe(this, new Observer<AuthResource<User>>() {
+        viewModel.observeAuthState().observe(this, new Observer<AuthResource<User>>() {
             @Override
             public void onChanged(AuthResource<User> userAuthResource) {
-                if(userAuthResource != null) {
-                    switch (userAuthResource.status) {
+                if(userAuthResource != null){
+                    switch (userAuthResource.status){
 
                         case LOADING:{
                             showProgressBar(true);
                             break;
                         }
+
                         case AUTHENTICATED:{
                             showProgressBar(false);
                             Log.d(TAG, "onChanged: LOGIN SUCCESS: " + userAuthResource.data.getEmail());
+                            onLoginSuccess();
                             break;
                         }
+
                         case ERROR:{
                             showProgressBar(false);
-                            Toast.makeText(AuthActivity.this, userAuthResource.message + "\n Did you Enter a number between 1 - 10", Toast.LENGTH_SHORT).show();
+                            Toast.makeText(AuthActivity.this, userAuthResource.message
+                                    + "\nDid you enter a number between 1 and 10?", Toast.LENGTH_SHORT).show();
                             break;
                         }
+
                         case NOT_AUTHENTICATED:{
                             showProgressBar(false);
                             break;
                         }
-
-
                     }
                 }
             }
         });
+    }
+
+    private void onLoginSuccess(){
+        Log.d(TAG, "onLoginSuccess: login successful!");
+        Intent intent = new Intent(this, MainActivity.class);
+        startActivity(intent);
+        finish();
     }
 
     private void showProgressBar(boolean isVisible) {

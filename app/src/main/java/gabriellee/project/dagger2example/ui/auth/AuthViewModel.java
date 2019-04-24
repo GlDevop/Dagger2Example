@@ -4,12 +4,11 @@ import android.util.Log;
 
 import androidx.lifecycle.LiveData;
 import androidx.lifecycle.LiveDataReactiveStreams;
-import androidx.lifecycle.MediatorLiveData;
-import androidx.lifecycle.Observer;
 import androidx.lifecycle.ViewModel;
 
 import javax.inject.Inject;
 
+import gabriellee.project.dagger2example.SessionManager;
 import gabriellee.project.dagger2example.models.User;
 import gabriellee.project.dagger2example.network.auth.AuthApi;
 import io.reactivex.functions.Function;
@@ -20,21 +19,23 @@ public class AuthViewModel extends ViewModel {
     private static final String TAG = "AuthViewModel";
 
     private final AuthApi authApi;
-
-    private MediatorLiveData<AuthResource<User>> authUser = new MediatorLiveData<>();
+    private SessionManager sessionManager;
 
     @Inject
-    public AuthViewModel(AuthApi authApi) {
+    public AuthViewModel(AuthApi authApi, SessionManager sessionManager) {
         this.authApi = authApi;
+        this.sessionManager = sessionManager;
         Log.d(TAG, "AuthViewModel: viewmodel is working...");
 
     }
 
     public void authenticateWithId(int userId) {
+        Log.d(TAG, "authenticateWithId: attempting to login");
+        sessionManager.authenticeWithId(queryUserId(userId));
+    }
 
-        authUser.setValue(AuthResource.loading((User)null));
-
-        final LiveData<AuthResource<User>> source = LiveDataReactiveStreams.fromPublisher(
+    private LiveData<AuthResource<User>> queryUserId(int userId) {
+        return LiveDataReactiveStreams.fromPublisher(
                 authApi.getUser(userId)
 
                         //instead of calling onError (error happens)
@@ -55,19 +56,11 @@ public class AuthViewModel extends ViewModel {
                                 return AuthResource.authenticated(user);
                             }
                         })
-                .subscribeOn(Schedulers.io())
+                        .subscribeOn(Schedulers.io())
         );
-
-        authUser.addSource(source, new Observer<AuthResource<User>>() {
-            @Override
-            public void onChanged(AuthResource<User> user) {
-                authUser.setValue(user);
-                authUser.removeSource(source);
-            }
-        });
     }
 
-    public LiveData<AuthResource<User>> observeUser() {
-        return authUser;
+    public LiveData<AuthResource<User>> observeAuthState() {
+        return sessionManager.getAuthUser();
     }
 }
